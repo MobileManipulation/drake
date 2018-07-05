@@ -72,6 +72,7 @@ drake_cc_library(
         "//common:autodiff",
         "//common:essential",
         "//common:polynomial",
+        "//common:symbolic",
         "//math:autodiff",
         "//math:matrix_util",
     ],
@@ -566,7 +567,7 @@ drake_cc_library(
         "//tools:with_gurobi": [
             ":mathematical_program_api",
             "//math:eigen_sparse_triplet",
-            "@gurobi",
+            "@gurobi//:gurobi_c",
         ],
         "//conditions:default": [
             ":mathematical_program_api",
@@ -762,7 +763,7 @@ drake_cc_library(
     deps = select({
         "//tools:with_gurobi": [
             "@eigen",
-            "@gurobi",
+            "@gurobi//:gurobi_c",
         ],
         "//conditions:default": [],
     }),
@@ -826,7 +827,9 @@ drake_cc_googletest(
     name = "constraint_test",
     deps = [
         ":constraint",
+        "//common:symbolic",
         "//common/test_utilities:eigen_matrix_compare",
+        "//common/test_utilities:symbolic_test_util",
         "//math:gradient",
     ],
 )
@@ -838,8 +841,10 @@ drake_cc_googletest(
         ":cost",
         ":create_cost",
         ":generic_trivial_cost",
+        "//common:symbolic",
         "//common/test_utilities:eigen_matrix_compare",
         "//common/test_utilities:is_dynamic_castable",
+        "//common/test_utilities:symbolic_test_util",
         "//math:gradient",
     ],
 )
@@ -1109,7 +1114,7 @@ drake_cc_googletest(
     tags = gurobi_test_tags() + mosek_test_tags() + [
         # Excluding asan because it is unreasonably slow (> 30 minutes).
         "no_asan",
-        # Times out with Valgrind
+        # Takes too long to run with Valgrind.
         "no_memcheck",
         # Excluding tsan because an assertion fails in LLVM code. Issue #6179.
         "no_tsan",
@@ -1131,8 +1136,6 @@ drake_cc_googletest(
     tags = gurobi_test_tags() + mosek_test_tags() + [
         # Excluding asan because it is unreasonably slow (> 30 minutes).
         "no_asan",
-        # Times out with Valgrind
-        "no_memcheck",
         # Excluding tsan because an assertion fails in LLVM code. Issue #6179.
         "no_tsan",
     ],
@@ -1151,8 +1154,6 @@ drake_cc_googletest(
     tags = gurobi_test_tags() + mosek_test_tags() + [
         # Excluding asan because it is unreasonably slow (> 30 minutes).
         "no_asan",
-        # Times out with Valgrind
-        "no_memcheck",
         # Excluding tsan because an assertion fails in LLVM code. Issue #6179.
         "no_tsan",
     ],
