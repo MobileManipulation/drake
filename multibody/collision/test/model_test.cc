@@ -13,6 +13,9 @@
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
 #include "drake/multibody/collision/drake_collision.h"
 
+// #define DRAKE_DISABLE_FCL 1
+#undef DRAKE_DISABLE_FCL
+
 using Eigen::AngleAxisd;
 using Eigen::Isometry3d;
 using Eigen::Vector3d;
@@ -122,9 +125,11 @@ std::vector<ModelType> GetUsableModelTypes() {
   std::vector<ModelType> types;
 #ifdef BULLET_COLLISION
   types.push_back(ModelType::kBullet);
+  std::cout << "BULLET_COLLISION is defined" << std::endl;
 #endif
 #ifndef DRAKE_DISABLE_FCL
   types.push_back(ModelType::kFcl);
+  std::cout << "DRAKE_DISABLE_FCL is NOT defined. We must be using fcl.\n";
 #endif
   return types;
 }
@@ -312,22 +317,20 @@ std::ostream& operator<<(::std::ostream& os,
   os << DrakeShapes::ShapeToString(param.elements_.second.getShape());
   os << ", ";
   switch (param.model_type_) {
+    #ifdef BULLET_COLLISION
     case ModelType::kBullet: {
-      os << "BulletModel";
-      break;
-    }
-#ifndef DRAKE_DISABLE_FCL
+            os << "BulletModel";
+            break;
+        }
+    #endif
     case ModelType::kFcl: {
       os << "FclModel";
       break;
     }
-#endif
-#ifdef BULLET_COLLISION
-    case ModelType::kUnusable: {
+case ModelType::kUnusable: {
       os << "UnusableModel";
       break;
     }
-#endif
   }
   return os;
 }
