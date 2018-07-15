@@ -137,8 +137,17 @@ BsplineCurve<T> BsplineCurve<T>::Derivative() const {
 
 template <typename T>
 bool BsplineCurve<T>::operator==(const BsplineCurve<T>& other) const {
-  return this->basis() == other.basis() &&
-         this->control_points() == other.control_points();
+  auto a = this->control_points();
+  auto b = other.control_points();
+  if(int(a.size())!=int(b.size())){
+    return false;
+  }
+  for(int i=0; i<int(a.size()); i++){
+    if( !(a[i] == b[i]) ){
+      return false;
+    }
+  }
+  return this->basis() == other.basis();
 }
 
 template <typename T>
