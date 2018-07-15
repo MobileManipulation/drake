@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import copy
+import warnings
 
 import unittest
 import numpy as np
@@ -21,7 +22,7 @@ from pydrake.systems.analysis import (
 from pydrake.systems.framework import (
     BasicVector, BasicVector_,
     Context_,
-    ContinuousState_,
+    ContinuousState, ContinuousState_,
     Diagram, Diagram_,
     DiagramBuilder, DiagramBuilder_,
     DiscreteUpdateEvent_,
@@ -38,7 +39,7 @@ from pydrake.systems.framework import (
     Supervector_,
     System_,
     SystemOutput_,
-    VectorBase_,
+    VectorBase, VectorBase_,
     VectorSystem_,
     )
 from pydrake.systems import primitives
@@ -84,8 +85,26 @@ class TestGeneral(unittest.TestCase):
         system = Adder(3, 10)
         self.assertEqual(system.get_num_input_ports(), 3)
         self.assertEqual(system.get_num_output_ports(), 1)
+        # Test deprecated methods.
+        context = system.CreateDefaultContext()
+        with warnings.catch_warnings(record=True) as w:
+            c = system.AllocateOutput(context)
+            self.assertEqual(len(w), 1)
         # TODO(eric.cousineau): Consolidate the main API tests for `System`
         # to this test point.
+
+    def test_context_api(self):
+        system = Adder(3, 10)
+        context = system.CreateDefaultContext()
+        self.assertIsInstance(
+            context.get_continuous_state(), ContinuousState)
+        self.assertIsInstance(
+            context.get_mutable_continuous_state(), ContinuousState)
+        self.assertIsInstance(
+            context.get_continuous_state_vector(), VectorBase)
+        self.assertIsInstance(
+            context.get_mutable_continuous_state_vector(), VectorBase)
+        # TODO(eric.cousineau): Consolidate main API tests for `Context` here.
 
     def test_instantiations(self):
         # Quick check of instantions for given types.
@@ -145,7 +164,7 @@ class TestGeneral(unittest.TestCase):
 
             def check_output(context):
                 # Check number of output ports and value for a given context.
-                output = system.AllocateOutput(context)
+                output = system.AllocateOutput()
                 self.assertEqual(output.get_num_ports(), 1)
                 system.CalcOutput(context, output)
                 if T == float:

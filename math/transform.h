@@ -3,6 +3,7 @@
 #include <limits>
 
 #include "drake/common/drake_assert.h"
+#include "drake/common/drake_bool.h"
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
 #include "drake/common/never_destroyed.h"
@@ -65,8 +66,20 @@ class Transform {
   /// orthonormal 3x3 rotation matrix.
   /// @note no attempt is made to orthogonalize the 3x3 rotation matrix part of
   /// `pose`.  As needed, use RotationMatrix::ProjectToRotationMatrix().
-  explicit Transform(const Isometry3<T>& pose) :
-      Transform(RotationMatrix<T>(pose.linear()), pose.translation()) {}
+  explicit Transform(const Isometry3<T>& pose) { SetFromIsometry3(pose); }
+
+  /// Sets `this` Transform from an Eigen Isometry3.
+  /// @param[in] pose Isometry3 that contains an allegedly valid rotation matrix
+  /// `R_AB` and also contains a position vector `p_AoBo_A` from frame A's
+  /// origin to frame B's origin.  `p_AoBo_A` must be expressed in frame A.
+  /// @throws std::logic_error in debug builds if R_AB is not a proper
+  /// orthonormal 3x3 rotation matrix.
+  /// @note no attempt is made to orthogonalize the 3x3 rotation matrix part of
+  /// `pose`.  As needed, use RotationMatrix::ProjectToRotationMatrix().
+  void SetFromIsometry3(const Isometry3<T>& pose) {
+    R_AB_ = RotationMatrix<T>(pose.linear());
+    p_AoBo_A_ = pose.translation();
+  }
 
   /// Creates a %Transform templatized on a scalar type U from a
   /// %Transform templatized on scalar type T.  For example,
@@ -156,7 +169,7 @@ class Transform {
   /// Returns `true` if `this` is exactly the identity transform.
   /// @returns `true` if `this` is exactly the identity transform.
   /// @see IsIdentityToEpsilon().
-  bool IsExactlyIdentity() const {
+  Bool<T> IsExactlyIdentity() const {
     return rotation().IsExactlyIdentity() && (translation().array() == 0).all();
   }
 
@@ -169,7 +182,7 @@ class Transform {
   /// (e.g., the magnitude of a characteristic position vector) by an epsilon
   /// (e.g., RotationMatrix::get_internal_tolerance_for_orthonormality()).
   /// @see IsExactlyIdentity().
-  bool IsIdentityToEpsilon(double translation_tolerance) const {
+  Bool<T> IsIdentityToEpsilon(double translation_tolerance) const {
     const T max_component = translation().template lpNorm<Eigen::Infinity>();
     return max_component <= translation_tolerance &&
         rotation().IsIdentityToInternalTolerance();
@@ -224,7 +237,7 @@ class Transform {
   /// @note Consider scaling tolerance with the largest of magA and magB, where
   /// magA and magB denoted the magnitudes of `this` position vector and `other`
   /// position vectors, respectively.
-  bool IsNearlyEqualTo(const Transform<T>& other, double tolerance) const {
+  Bool<T> IsNearlyEqualTo(const Transform<T>& other, double tolerance) const {
     return GetMaximumAbsoluteDifference(other) <= tolerance;
   }
 

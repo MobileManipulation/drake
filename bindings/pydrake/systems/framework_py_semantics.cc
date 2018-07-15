@@ -13,7 +13,7 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/framework/event.h"
 #include "drake/systems/framework/leaf_context.h"
-#include "drake/systems/framework/output_port_value.h"
+#include "drake/systems/framework/system_output.h"
 
 using std::string;
 using std::unique_ptr;
@@ -97,6 +97,12 @@ void DefineFrameworkPySemantics(py::module m) {
            py_reference_internal)
       // Sugar methods
       // - Continuous.
+      .def("get_continuous_state",
+           &Context<T>::get_continuous_state,
+           py_reference_internal)
+      .def("get_mutable_continuous_state",
+           &Context<T>::get_mutable_continuous_state,
+           py_reference_internal)
       .def("get_continuous_state_vector",
            &Context<T>::get_continuous_state_vector,
            py_reference_internal)
@@ -178,7 +184,6 @@ void DefineFrameworkPySemantics(py::module m) {
 
     auto system_output = DefineTemplateClassWithDefault<SystemOutput<T>>(
         m, "SystemOutput", GetPyParam<T>());
-    DefClone(&system_output);
     system_output
       .def("get_num_ports", &SystemOutput<T>::get_num_ports)
       .def("get_data", &SystemOutput<T>::get_data,

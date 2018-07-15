@@ -14,7 +14,9 @@
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
 #include "drake/common/test_utilities/expect_throws_message.h"
 #include "drake/geometry/geometry_frame.h"
+#include "drake/geometry/query_object.h"
 #include "drake/geometry/scene_graph.h"
+#include "drake/geometry/visual_material.h"
 #include "drake/math/autodiff_gradient.h"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/math/rotation_matrix.h"
@@ -43,7 +45,9 @@ using geometry::FrameId;
 using geometry::FramePoseVector;
 using geometry::GeometryId;
 using geometry::PenetrationAsPointPair;
+using geometry::QueryObject;
 using geometry::SceneGraph;
+using geometry::VisualMaterial;
 using math::RollPitchYaw;
 using math::RotationMatrix;
 using math::Transform;
@@ -96,7 +100,6 @@ class MultibodyPlantTester {
 };
 
 namespace {
-
 // This test creates a simple model for an acrobot using MultibodyPlant and
 // verifies a number of invariants such as that body and joint models were
 // properly added and the model sizes.
@@ -105,12 +108,7 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreation) {
 
   const AcrobotParameters parameters;
   unique_ptr<MultibodyPlant<double>> plant =
-      MakeAcrobotPlant(parameters, true /* Make a finalized plant. */);
-
-  // MakeAcrobotPlant() has already called Finalize() on the new acrobot plant.
-  // Therefore attempting to call this method again will throw an exception.
-  // Verify this.
-  EXPECT_THROW(plant->Finalize(), std::logic_error);
+      MakeAcrobotPlant(parameters, false /* Don't make a finalized plant. */);
 
   // Model Size. Counting the world body, there should be three bodies.
   EXPECT_EQ(plant->num_bodies(), 3);
@@ -118,10 +116,50 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreation) {
   EXPECT_EQ(plant->num_actuators(), 1);
   EXPECT_EQ(plant->num_actuated_dofs(), 1);
 
-  // State size.
-  EXPECT_EQ(plant->num_positions(), 2);
-  EXPECT_EQ(plant->num_velocities(), 2);
-  EXPECT_EQ(plant->num_multibody_states(), 4);
+  // We expect to see the default and world model instances.
+  EXPECT_EQ(plant->num_model_instances(), 2);
+
+  // Add a split pendulum to the plant.
+  const ModelInstanceIndex pendulum_model_instance =
+      AddModelFromSdfFile(FindResourceOrThrow(
+          "drake/multibody/multibody_tree/"
+          "multibody_plant/test/split_pendulum.sdf"), plant.get());
+  EXPECT_EQ(plant->num_model_instances(), 3);
+
+  plant->Finalize();
+  // We should throw an exception if finalize is called twice.  Verify this.
+  EXPECT_THROW(plant->Finalize(), std::logic_error);
+
+  // Verify the final model size for the model as a whole and for each instance.
+  EXPECT_EQ(plant->num_bodies(), 5);
+  EXPECT_EQ(plant->num_joints(), 4);
+  EXPECT_EQ(plant->num_actuators(), 2);
+  EXPECT_EQ(plant->num_actuated_dofs(), 2);
+
+    // State size.
+  EXPECT_EQ(plant->num_positions(), 3);
+  EXPECT_EQ(plant->num_velocities(), 3);
+  EXPECT_EQ(plant->num_multibody_states(), 6);
+
+  EXPECT_EQ(plant->num_actuated_dofs(default_model_instance()), 1);
+  EXPECT_EQ(plant->num_positions(default_model_instance()), 2);
+  EXPECT_EQ(plant->num_velocities(default_model_instance()), 2);
+
+  EXPECT_EQ(plant->num_actuated_dofs(pendulum_model_instance), 1);
+  EXPECT_EQ(plant->num_positions(pendulum_model_instance), 1);
+  EXPECT_EQ(plant->num_velocities(pendulum_model_instance), 1);
+
+  // Check that the input/output ports have the appropriate geometry.
+  EXPECT_THROW(plant->get_actuation_input_port(), std::runtime_error);
+  EXPECT_EQ(plant->get_actuation_input_port(
+      default_model_instance()).size(), 1);
+  EXPECT_EQ(plant->get_actuation_input_port(
+      pendulum_model_instance).size(), 1);
+  EXPECT_EQ(plant->get_continuous_state_output_port().size(), 6);
+  EXPECT_EQ(plant->get_continuous_state_output_port(
+      default_model_instance()).size(), 4);
+  EXPECT_EQ(plant->get_continuous_state_output_port(
+      pendulum_model_instance).size(), 2);
 
   // Query if elements exist in the model.
   EXPECT_TRUE(plant->HasBodyNamed(parameters.link1_name()));
@@ -138,8 +176,17 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreation) {
   // Get links by name.
   const Body<double>& link1 = plant->GetBodyByName(parameters.link1_name());
   EXPECT_EQ(link1.name(), parameters.link1_name());
+  EXPECT_EQ(link1.model_instance(), default_model_instance());
+
   const Body<double>& link2 = plant->GetBodyByName(parameters.link2_name());
   EXPECT_EQ(link2.name(), parameters.link2_name());
+  EXPECT_EQ(link2.model_instance(), default_model_instance());
+
+  const Body<double>& upper = plant->GetBodyByName("upper_section");
+  EXPECT_EQ(upper.model_instance(), pendulum_model_instance);
+
+  const Body<double>& lower = plant->GetBodyByName("lower_section");
+  EXPECT_EQ(lower.model_instance(), pendulum_model_instance);
 
   // Attempting to retrieve a link that is not part of the model should throw
   // an exception.
@@ -149,9 +196,14 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreation) {
   const Joint<double>& shoulder_joint =
       plant->GetJointByName(parameters.shoulder_joint_name());
   EXPECT_EQ(shoulder_joint.name(), parameters.shoulder_joint_name());
-  const Joint<double>& elbow_joint =
+  EXPECT_EQ(shoulder_joint.model_instance(), default_model_instance());
+    const Joint<double>& elbow_joint =
       plant->GetJointByName(parameters.elbow_joint_name());
   EXPECT_EQ(elbow_joint.name(), parameters.elbow_joint_name());
+  EXPECT_EQ(elbow_joint.model_instance(), default_model_instance());
+  const Joint<double>& pin_joint =
+      plant->GetJointByName("pin");
+  EXPECT_EQ(pin_joint.model_instance(), pendulum_model_instance);
   EXPECT_THROW(plant->GetJointByName(kInvalidName), std::logic_error);
 
   // Templatized version to obtain retrieve a particular known type of joint.
@@ -161,12 +213,16 @@ GTEST_TEST(MultibodyPlant, SimpleModelCreation) {
   const RevoluteJoint<double>& elbow =
       plant->GetJointByName<RevoluteJoint>(parameters.elbow_joint_name());
   EXPECT_EQ(elbow.name(), parameters.elbow_joint_name());
+  const RevoluteJoint<double>& pin =
+      plant->GetJointByName<RevoluteJoint>("pin");
+  EXPECT_EQ(pin.name(), "pin");
   EXPECT_THROW(plant->GetJointByName(kInvalidName), std::logic_error);
 
   // MakeAcrobotPlant() has already called Finalize() on the acrobot model.
   // Therefore no more modeling elements can be added. Verify this.
   DRAKE_EXPECT_THROWS_MESSAGE(
-      plant->AddRigidBody("AnotherBody", SpatialInertia<double>()),
+      plant->AddRigidBody("AnotherBody", default_model_instance(),
+                          SpatialInertia<double>()),
       std::logic_error,
       /* Verify this method is throwing for the right reasons. */
       "Post-finalize calls to '.*' are not allowed; "
@@ -282,13 +338,25 @@ class AcrobotPlantTests : public ::testing::Test {
     const VectorXd xdot = derivatives_->CopyToVector();
 
     // Now compute inverse dynamics using our benchmark:
-    Vector2d C_expected = acrobot_benchmark_.CalcCoriolisVector(
+    const Vector2d C_expected = acrobot_benchmark_.CalcCoriolisVector(
         theta1, theta2, theta1dot, theta2dot);
-    Vector2d tau_g_expected =
+    const Vector2d tau_g_expected =
         acrobot_benchmark_.CalcGravityVector(theta1, theta2);
-    Vector2d rhs = tau_g_expected - C_expected + Vector2d(0.0, input_torque);
-    Matrix2d M_expected = acrobot_benchmark_.CalcMassMatrix(theta2);
-    Vector2d vdot_expected = M_expected.inverse() * rhs;
+    const Vector2d tau_damping(
+        -parameters_.b1() * theta1dot, -parameters_.b2() * theta2dot);
+
+    // Verify the computation of the contribution due to joint damping.
+    MultibodyForces<double> forces(plant_->model());
+    shoulder_->AddInDamping(*context_, &forces);
+    elbow_->AddInDamping(*context_, &forces);
+    EXPECT_TRUE(CompareMatrices(forces.generalized_forces(), tau_damping,
+                                kTolerance, MatrixCompareType::relative));
+
+    // Verify the computation of xdot.
+    const Vector2d rhs =
+        tau_g_expected + tau_damping - C_expected + Vector2d(0.0, input_torque);
+    const Matrix2d M_expected = acrobot_benchmark_.CalcMassMatrix(theta2);
+    const Vector2d vdot_expected = M_expected.inverse() * rhs;
     VectorXd xdot_expected(4);
     xdot_expected << Vector2d(theta1dot, theta2dot), vdot_expected;
 
@@ -414,6 +482,15 @@ TEST_F(AcrobotPlantTests, CalcTimeDerivatives) {
 TEST_F(AcrobotPlantTests, DoCalcDiscreteVariableUpdates) {
   // Set up an additional discrete state model of the same acrobot model.
   SetUpDiscreteAcrobotPlant(0.001 /* time step in seconds. */);
+
+  const ModelInstanceIndex instance_index =
+      discrete_plant_->GetModelInstanceByName("acrobot");
+
+  // The generalized contact forces output port should have the same size as
+  // number of generalized velocities in the model instance, even if there is
+  // no contact geometry in the model.
+  EXPECT_EQ(discrete_plant_->get_generalized_contact_forces_output_port(
+      instance_index).size(), 2);
 
   // Verify the implementation for a number of arbitrarily chosen states.
   VerifyDoCalcDiscreteVariableUpdates(
@@ -881,12 +958,77 @@ GTEST_TEST(MultibodyPlantTest, CollisionGeometryRegistration) {
       plant.default_coulomb_friction(sphere2_id) == sphere2_friction));
 }
 
+// Verifies the process of visual geometry registration with a SceneGraph.
+// We build a model with two spheres and a ground plane. The ground plane is
+// located at y = 0 with normal in the y-axis direction.
+GTEST_TEST(MultibodyPlantTest, VisualGeometryRegistration) {
+  // Parameters of the setup.
+  const double radius = 0.5;
+
+  SceneGraph<double> scene_graph;
+  MultibodyPlant<double> plant;
+  plant.RegisterAsSourceForSceneGraph(&scene_graph);
+
+  // A half-space for the ground geometry -- uses default visual material
+  GeometryId ground_id = plant.RegisterVisualGeometry(
+      plant.world_body(),
+      // A half-space passing through the origin in the x-z plane.
+      geometry::HalfSpace::MakePose(Vector3d::UnitY(), Vector3d::Zero()),
+      geometry::HalfSpace(), &scene_graph);
+
+  // Add two spherical bodies.
+  const RigidBody<double>& sphere1 =
+      plant.AddRigidBody("Sphere1", SpatialInertia<double>());
+  Vector4<double> sphere1_diffuse{0.9, 0.1, 0.1, 0.5};
+  GeometryId sphere1_id = plant.RegisterVisualGeometry(
+      sphere1, Isometry3d::Identity(), geometry::Sphere(radius),
+      VisualMaterial(sphere1_diffuse), &scene_graph);
+  const RigidBody<double>& sphere2 =
+      plant.AddRigidBody("Sphere2", SpatialInertia<double>());
+  Vector4<double> sphere2_diffuse{0.1, 0.9, 0.1, 0.5};
+  GeometryId sphere2_id = plant.RegisterVisualGeometry(
+      sphere2, Isometry3d::Identity(), geometry::Sphere(radius),
+      VisualMaterial(sphere2_diffuse), &scene_graph);
+
+  // We are done defining the model.
+  plant.Finalize(&scene_graph);
+
+  EXPECT_EQ(plant.num_visual_geometries(), 3);
+  EXPECT_EQ(plant.num_collision_geometries(), 0);
+  EXPECT_TRUE(plant.geometry_source_is_registered());
+  EXPECT_TRUE(plant.get_source_id());
+
+  unique_ptr<Context<double>> context = scene_graph.CreateDefaultContext();
+  unique_ptr<AbstractValue> state_value =
+      scene_graph.get_query_output_port().Allocate();
+  EXPECT_NO_THROW(state_value->GetValueOrThrow<QueryObject<double>>());
+  const QueryObject<double>& query_object =
+      state_value->GetValueOrThrow<QueryObject<double>>();
+  scene_graph.get_query_output_port().Calc(*context, state_value.get());
+
+  const VisualMaterial* test_material =
+      query_object.GetVisualMaterial(ground_id);
+  EXPECT_NE(test_material, nullptr);
+  EXPECT_TRUE(CompareMatrices(test_material->diffuse(),
+                              VisualMaterial().diffuse(), 0.0,
+                              MatrixCompareType::absolute));
+
+  test_material = query_object.GetVisualMaterial(sphere1_id);
+  EXPECT_NE(test_material, nullptr);
+  EXPECT_TRUE(CompareMatrices(test_material->diffuse(), sphere1_diffuse, 0.0,
+                              MatrixCompareType::absolute));
+
+  test_material = query_object.GetVisualMaterial(sphere2_id);
+  EXPECT_NE(test_material, nullptr);
+  EXPECT_TRUE(CompareMatrices(test_material->diffuse(), sphere2_diffuse, 0.0,
+                              MatrixCompareType::absolute));
+}
+
 GTEST_TEST(MultibodyPlantTest, LinearizePendulum) {
   const double kTolerance = 5 * std::numeric_limits<double>::epsilon();
 
   PendulumParameters parameters;
-  unique_ptr<MultibodyPlant<double>> pendulum =
-      MakePendulumPlant(parameters);
+  unique_ptr<MultibodyPlant<double>> pendulum = MakePendulumPlant(parameters);
   const auto& pin =
       pendulum->GetJointByName<RevoluteJoint>(parameters.pin_joint_name());
   unique_ptr<Context<double>> context = pendulum->CreateDefaultContext();
@@ -905,9 +1047,11 @@ GTEST_TEST(MultibodyPlantTest, LinearizePendulum) {
   // Compute the expected solution by hand.
   Eigen::Matrix2d A;
   Eigen::Vector2d B;
-  A <<                            0.0, 1.0,
-      parameters.g() / parameters.l(), 0.0;
-  B << 0, 1 / (parameters.m()* parameters.l() * parameters.l());
+  const double domegadot_domega = -parameters.damping() /
+      (parameters.m() * parameters.l() * parameters.l());
+  A << 0.0, 1.0,
+       parameters.g() / parameters.l(), domegadot_domega;
+  B << 0, 1 / (parameters.m() * parameters.l() * parameters.l());
   EXPECT_TRUE(CompareMatrices(linearized_pendulum->A(), A, kTolerance));
   EXPECT_TRUE(CompareMatrices(linearized_pendulum->B(), B, kTolerance));
 
@@ -919,8 +1063,8 @@ GTEST_TEST(MultibodyPlantTest, LinearizePendulum) {
       *pendulum, *context,
       pendulum->get_actuation_input_port().get_index(), systems::kNoOutput);
   // Compute the expected solution by hand.
-  A <<                             0.0, 1.0,
-      -parameters.g() / parameters.l(), 0.0;
+  A << 0.0, 1.0,
+      -parameters.g() / parameters.l(), domegadot_domega;
   B << 0, 1 / (parameters.m()* parameters.l() * parameters.l());
   EXPECT_TRUE(CompareMatrices(linearized_pendulum->A(), A, kTolerance));
   EXPECT_TRUE(CompareMatrices(linearized_pendulum->B(), B, kTolerance));
@@ -1449,4 +1593,3 @@ TEST_F(MultibodyPlantContactJacobianTests, TangentJacobian) {
 }  // namespace multibody_plant
 }  // namespace multibody
 }  // namespace drake
-
