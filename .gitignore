@@ -45,6 +45,7 @@ drake.jar
 pod-build
 /BUILD
 /build
+/install
 cmake-build-*
 mlint_output.html
 .#*
