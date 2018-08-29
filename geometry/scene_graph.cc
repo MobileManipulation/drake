@@ -16,7 +16,7 @@ namespace geometry {
 
 using systems::AbstractValue;
 using systems::Context;
-using systems::InputPortDescriptor;
+using systems::InputPort;
 using systems::LeafContext;
 using systems::LeafSystem;
 using systems::rendering::PoseBundle;
@@ -78,6 +78,7 @@ SceneGraph<T>::SceneGraph()
     : LeafSystem<T>(SystemTypeTag<geometry::SceneGraph>{}) {
   auto state_value = make_unique<GeometryStateValue<T>>();
   initial_state_ = &state_value->template GetMutableValue<GeometryState<T>>();
+  model_inspector_.set(initial_state_);
   geometry_state_index_ = this->DeclareAbstractState(std::move(state_value));
 
   bundle_port_index_ =
@@ -99,6 +100,7 @@ SceneGraph<T>::SceneGraph(const SceneGraph<U>& other) : SceneGraph() {
   // system to persist the same state.
   if (other.initial_state_ != nullptr) {
     *initial_state_ = *(other.initial_state_->ToAutoDiffXd());
+    model_inspector_.set(initial_state_);
   }
   context_has_been_allocated_ = other.context_has_been_allocated_;
 
@@ -142,7 +144,7 @@ bool SceneGraph<T>::SourceIsRegistered(SourceId id) const {
 }
 
 template <typename T>
-const systems::InputPortDescriptor<T>& SceneGraph<T>::get_source_pose_port(
+const systems::InputPort<T>& SceneGraph<T>::get_source_pose_port(
     SourceId id) {
   ThrowUnlessRegistered(id, "Can't acquire pose port for unknown source id: ");
   return this->get_input_port(input_source_ids_[id].pose_port);
@@ -186,6 +188,12 @@ GeometryId SceneGraph<T>::RegisterAnchoredGeometry(
   GS_THROW_IF_CONTEXT_ALLOCATED
   return initial_state_->RegisterAnchoredGeometry(source_id,
                                                   std::move(geometry));
+}
+
+template <typename T>
+const SceneGraphInspector<T>& SceneGraph<T>::model_inspector() const {
+  GS_THROW_IF_CONTEXT_ALLOCATED
+  return model_inspector_;
 }
 
 template <typename T>
@@ -234,9 +242,7 @@ void SceneGraph<T>::CalcQueryObject(const Context<T>& context,
   const GeometryContext<T>* geom_context =
       dynamic_cast<const GeometryContext<T>*>(&context);
   DRAKE_DEMAND(geom_context);
-  // The result of calling calc should *always* produce a live query object.
-  output->context_ = geom_context;
-  output->scene_graph_ = this;
+  output->set(geom_context, this);
 }
 
 template <typename T>
