@@ -10,7 +10,7 @@
 #include "drake/common/trajectories/piecewise_polynomial.h"
 #include "drake/manipulation/planner/kinematic_tree.h"
 #include "drake/math/bspline_curve.h"
-#include "drake/math/transform.h"
+#include "drake/math/rigid_transform.h"
 
 namespace drake {
 namespace manipulation {
@@ -157,7 +157,7 @@ OptimizeTrajectoryThroughDesiredConfigurations(
 drake::optional<math::BsplineCurve<double>>
 OptimizeTrajectoryThroughDesiredToolPoses(
     const KinematicTree& tree,
-    const std::vector<drake::math::Transform<double>>& X_RT_desired_sequence,
+    const std::vector<drake::math::RigidTransform<double>>& X_RT_desired_sequence,
     const std::string& tool_frame_name,
     const drake::optional<Eigen::VectorXd>& q0 = {},
     const drake::optional<std::vector<double>>& durations = {},

@@ -12,7 +12,7 @@
 
 using drake::math::BsplineBasis;
 using drake::math::BsplineCurve;
-using drake::math::Transform;
+using drake::math::RigidTransform;
 using drake::solvers::Constraint;
 
 namespace drake {
@@ -272,7 +272,7 @@ OptimizeTrajectoryThroughDesiredConfigurations(
 
 optional<BsplineCurve<double>> OptimizeTrajectoryThroughDesiredToolPoses(
     const KinematicTree& robot,
-    const std::vector<Transform<double>>& desired_tool_poses,
+    const std::vector<RigidTransform<double>>& desired_tool_poses,
     const std::string& tool_frame_name,
     const drake::optional<Eigen::VectorXd>& q0,
     const drake::optional<std::vector<double>>& durations,
@@ -318,7 +318,7 @@ optional<BsplineCurve<double>> OptimizeTrajectoryThroughDesiredToolPoses(
       program.AddGenericPositionConstraint(
           robot.MakeRelativePoseConstraint(
               reference_frame_name.value_or("world"), tool_frame_name,
-              Transform<double>(desired_tool_poses[i]),
+              RigidTransform<double>(desired_tool_poses[i]),
               actual_parameters.orientation_tolerance,
               actual_parameters.position_tolerance),
           {{plan_fraction(i), plan_fraction(i)}});

@@ -13,13 +13,13 @@
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
 #include "drake/manipulation/planner/kinematic_tree.h"
 #include "drake/manipulation/util/world_sim_tree_builder.h"
-#include "drake/math/transform.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/joints/floating_base_types.h"
 #include "drake/multibody/joints/roll_pitch_yaw_floating_joint.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/solvers/constraint.h"
 
-using drake::math::Transform;
+using drake::math::RigidTransform;
 using drake::solvers::Constraint;
 using drake::manipulation::util::WorldSimTreeBuilder;
 using drake::multibody::joints::FloatingBaseType;
@@ -161,12 +161,12 @@ TEST_P(RigidBodyTreeWrapperTests, CalcRelativeTransformTest) {
     for (const auto& frame_B : this->tree_->get_frames()) {
       drake::log()->debug("Frame A: {}\tFrame B: {}", frame_A->get_name(),
                           frame_B->get_name());
-      Transform<double> X_WA_expected(
+      RigidTransform<double> X_WA_expected(
           this->tree_->CalcFramePoseInWorldFrame(cache, *frame_A));
-      Transform<double> X_WB_expected(
+      RigidTransform<double> X_WB_expected(
           this->tree_->CalcFramePoseInWorldFrame(cache, *frame_B));
-      Transform<double> X_AB_expected = X_WA_expected.inverse() * X_WB_expected;
-      Transform<double> X_AB_actual = this->wrapper_->CalcRelativeTransform(
+      RigidTransform<double> X_AB_expected = X_WA_expected.inverse() * X_WB_expected;
+      RigidTransform<double> X_AB_actual = this->wrapper_->CalcRelativeTransform(
           q, frame_A->get_name(), frame_B->get_name());
       EXPECT_TRUE(X_AB_actual
                       .IsNearlyEqualTo(X_AB_expected,
@@ -204,9 +204,9 @@ TEST_P(RigidBodyTreeWrapperTests, MakeRelativePoseConstraintTest) {
   VectorX<double> q_1 = this->wrapper_->GetRandomConfiguration(&generator);
   for (const auto& frame_A : this->tree_->get_frames()) {
     for (const auto& frame_B : this->tree_->get_frames()) {
-      Transform<double> X_AB_0 = this->wrapper_->CalcRelativeTransform(
+      RigidTransform<double> X_AB_0 = this->wrapper_->CalcRelativeTransform(
           q_0, frame_A->get_name(), frame_B->get_name());
-      Transform<double> X_AB_1 = this->wrapper_->CalcRelativeTransform(
+      RigidTransform<double> X_AB_1 = this->wrapper_->CalcRelativeTransform(
           q_1, frame_A->get_name(), frame_B->get_name());
       std::shared_ptr<Constraint> relative_pose_constraint =
           this->wrapper_->MakeRelativePoseConstraint(
@@ -234,7 +234,7 @@ std::unique_ptr<RigidBodyTree<double>> MakeUncompiledRobotWithFloatingBody() {
   auto body = std::make_unique<RigidBody<double>>();
   body->set_spatial_inertia(drake::SquareTwistMatrix<double>::Identity());
   body->set_name("floating_body");
-  Transform<double> X_WF{};
+  RigidTransform<double> X_WF{};
   body->add_joint(&tree->world(), std::make_unique<RollPitchYawFloatingJoint>(
                                       "floating_joint", X_WF.GetAsIsometry3()));
   tree->add_rigid_body(std::move(body));

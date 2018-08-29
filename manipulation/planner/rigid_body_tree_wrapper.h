@@ -6,7 +6,7 @@
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
 #include "drake/manipulation/planner/kinematic_tree.h"
-#include "drake/math/transform.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/rigid_body_tree.h"
 #include "drake/solvers/constraint.h"
 
@@ -52,7 +52,7 @@ class RigidBodyTreeWrapper final : public KinematicTree {
   drake::VectorX<double> GetRandomConfiguration(
       std::default_random_engine* generator) const override;
 
-  drake::math::Transform<double> CalcRelativeTransform(
+  drake::math::RigidTransform<double> CalcRelativeTransform(
       const drake::VectorX<double>& q, const std::string& frame_A_name,
       const std::string& frame_B_name) const override;
 
@@ -61,7 +61,7 @@ class RigidBodyTreeWrapper final : public KinematicTree {
 
   std::shared_ptr<drake::solvers::Constraint> MakeRelativePoseConstraint(
       const std::string& frame_A, const std::string& frame_B,
-      const drake::math::Transform<double>& X_AB,
+      const drake::math::RigidTransform<double>& X_AB,
       double orientation_tolerance = 0,
       double position_tolerance = 0) const override;
 

@@ -736,14 +736,14 @@ operator*(const MatrixL& lhs, const MatrixR& rhs) {
   return lhs.template cast<Expression>() * rhs.template cast<Expression>();
 }
 
-/// Transform<double> * Transform<Expression> => Transform<Expression>
+/// RigidTransform<double> * Transform<Expression> => Transform<Expression>
 template <int Dim, int LhsMode, int RhsMode, int LhsOptions, int RhsOptions>
 auto operator*(const Eigen::Transform<Expression, Dim, LhsMode, LhsOptions>& t1,
                const Eigen::Transform<double, Dim, RhsMode, RhsOptions>& t2) {
   return t1 * t2.template cast<Expression>();
 }
 
-/// Transform<Expression> * Transform<double> => Transform<Expression>
+/// Transform<Expression> * RigidTransform<double> => Transform<Expression>
 template <int Dim, int LhsMode, int RhsMode, int LhsOptions, int RhsOptions>
 auto operator*(
     const Eigen::Transform<double, Dim, LhsMode, LhsOptions>& t1,

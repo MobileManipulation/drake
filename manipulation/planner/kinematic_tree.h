@@ -5,7 +5,7 @@
 
 #include "drake/common/drake_copyable.h"
 #include "drake/common/eigen_types.h"
-#include "drake/math/transform.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/solvers/constraint.h"
 
 namespace drake {
@@ -72,7 +72,7 @@ class KinematicTree {
    *   The relative transform from frame B to frame A, such that
    *   `p_AQ = X_AB⋅p_BQ`.
    */
-  virtual drake::math::Transform<double> CalcRelativeTransform(
+  virtual drake::math::RigidTransform<double> CalcRelativeTransform(
       const drake::VectorX<double>& q, const std::string& frame_A_name,
       const std::string& frame_B_name) const = 0;
 
@@ -108,7 +108,7 @@ class KinematicTree {
   virtual std::shared_ptr<drake::solvers::Constraint>
   MakeRelativePoseConstraint(const std::string& frame_A_name,
                              const std::string& frame_B_name,
-                             const drake::math::Transform<double>& X_AB_desired,
+                             const drake::math::RigidTransform<double>& X_AB_desired,
                              double orientation_tolerance = 0,
                              double position_tolerance = 0) const = 0;
 

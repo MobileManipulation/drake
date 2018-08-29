@@ -15,7 +15,7 @@ using drake::AutoDiffVecXd;
 using drake::Vector3;
 using drake::Vector4;
 using drake::VectorX;
-using drake::math::Transform;
+using drake::math::RigidTransform;
 using drake::solvers::Constraint;
 using drake::systems::plants::KinematicsCacheHelper;
 using drake::systems::plants::SingleTimeKinematicConstraintWrapper;
@@ -52,9 +52,9 @@ class RelativePoseConstraint : public Constraint {
   // to frame A (`X_AB_des`), and tolerances on angular and transational error
   // (`orientation_tolerance`, `position_tolerance`), along with the
   // RigidBodyTree to which frames A and B belong..
-  RelativePoseConstraint(int frame_A_body_index, const Transform<double>& X_AbA,
-                         int frame_B_body_index, const Transform<double>& X_BbB,
-                         const drake::math::Transform<double> X_AB_des,
+  RelativePoseConstraint(int frame_A_body_index, const RigidTransform<double>& X_AbA,
+                         int frame_B_body_index, const RigidTransform<double>& X_BbB,
+                         const drake::math::RigidTransform<double> X_AB_des,
                          double orientation_tolerance,
                          double position_tolerance,
                          const RigidBodyTree<double>* tree)
@@ -68,7 +68,7 @@ class RelativePoseConstraint : public Constraint {
                         Vector3<double>::Constant(position_tolerance))
                        .finished()) {
     const Eigen::Matrix3Xd p_BbB = X_BbB.translation();
-    Transform<double> X_AbBb_des = X_AbA * X_AB_des * X_BbB.inverse();
+    RigidTransform<double> X_AbBb_des = X_AbA * X_AB_des * X_BbB.inverse();
     // NOTE 1: The const_casts below are required by the APIs for
     // RelativeQuatConstraint and RelativePositionConstraint, which take a
     // non-const pointer despite the fact that they do not modify the
@@ -226,10 +226,10 @@ VectorX<double> RigidBodyTreeWrapper::GetRandomConfiguration(
   return random_configuration;
 }
 
-Transform<double> RigidBodyTreeWrapper::CalcRelativeTransform(
+RigidTransform<double> RigidBodyTreeWrapper::CalcRelativeTransform(
     const VectorX<double>& q, const std::string& frame_A_name,
     const std::string& frame_B_name) const {
-  return Transform<double>(tree_->relativeTransform(
+  return RigidTransform<double>(tree_->relativeTransform(
       tree_->doKinematics(q), tree_->findFrame(frame_A_name)->get_frame_index(),
       tree_->findFrame(frame_B_name)->get_frame_index()));
 }
@@ -264,7 +264,7 @@ RigidBodyTreeWrapper::MakeCollisionAvoidanceConstraint(
 std::shared_ptr<drake::solvers::Constraint>
 RigidBodyTreeWrapper::MakeRelativePoseConstraint(
     const std::string& frame_A_name, const std::string& frame_B_name,
-    const drake::math::Transform<double>& X_AB_des,
+    const drake::math::RigidTransform<double>& X_AB_des,
     double orientation_tolerance, double position_tolerance) const {
   std::shared_ptr<RigidBodyFrame<double>> frame_A =
       tree_->findFrame(frame_A_name);
@@ -272,8 +272,8 @@ RigidBodyTreeWrapper::MakeRelativePoseConstraint(
       tree_->findFrame(frame_B_name);
   const int frame_A_body_index = frame_A->get_rigid_body().get_body_index();
   const int frame_B_body_index = frame_B->get_rigid_body().get_body_index();
-  Transform<double> X_AbA{frame_A->get_transform_to_body()};
-  Transform<double> X_BbB{frame_B->get_transform_to_body()};
+  RigidTransform<double> X_AbA{frame_A->get_transform_to_body()};
+  RigidTransform<double> X_BbB{frame_B->get_transform_to_body()};
   return std::make_shared<RelativePoseConstraint>(
       frame_A_body_index, X_AbA, frame_B_body_index, X_BbB, X_AB_des,
       orientation_tolerance, position_tolerance, tree_);

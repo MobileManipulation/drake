@@ -33,14 +33,14 @@ class MockKinematicTree : public KinematicTree {
                      drake::VectorX<double>(std::default_random_engine*));
   MOCK_CONST_METHOD3(
       CalcRelativeTransform,
-      drake::math::Transform<double>(const drake::VectorX<double>&,
+      drake::math::RigidTransform<double>(const drake::VectorX<double>&,
                                      const std::string&, const std::string&));
   MOCK_CONST_METHOD1(MakeCollisionAvoidanceConstraint,
                      std::shared_ptr<drake::solvers::Constraint>(double));
   MOCK_CONST_METHOD5(MakeRelativePoseConstraint,
                      std::shared_ptr<drake::solvers::Constraint>(
                          const std::string&, const std::string&,
-                         const drake::math::Transform<double>&, double,
+                         const drake::math::RigidTransform<double>&, double,
                          double));
   MOCK_METHOD3(DoSetJointPositionLimits,
                void(int position_index, double lower_limit,

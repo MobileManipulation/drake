@@ -131,7 +131,7 @@ TEST_F(SymbolicExpressionTransformationTest, ExpectedAnswers) {
   // clang-format on
   isometry_double.rotate(R);
 
-  // Expected result from Transform<Expression> * Transform<double>.
+  // Expected result from Transform<Expression> * RigidTransform<double>.
   Eigen::Matrix<Expression, 4, 4> expected_expr_double;
   // clang-format off
   expected_expr_double << 0, 0, -1, (1 + x),
@@ -141,7 +141,7 @@ TEST_F(SymbolicExpressionTransformationTest, ExpectedAnswers) {
   // clang-format on
   EXPECT_EQ((isometry_expr * isometry_double).matrix(), expected_expr_double);
 
-  // Expected result from Transform<double> * Transform<Expression>.
+  // Expected result from RigidTransform<double> * Transform<Expression>.
   Eigen::Matrix<Expression, 4, 4> expected_double_expr;
   // clang-format off
   expected_double_expr << 0, 0, -1, (1 - z),

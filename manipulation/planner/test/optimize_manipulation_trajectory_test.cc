@@ -13,13 +13,13 @@
 #include "drake/manipulation/planner/rigid_body_tree_wrapper.h"
 #include "drake/manipulation/util/world_sim_tree_builder.h"
 #include "drake/math/bspline_curve.h"
-#include "drake/math/transform.h"
+#include "drake/math/rigid_transform.h"
 #include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/multibody/rigid_body_tree.h"
 
 using drake::examples::kuka_iiwa_arm::get_iiwa_max_joint_velocities;
 using drake::math::BsplineCurve;
-using drake::math::Transform;
+using drake::math::RigidTransform;
 using drake::trajectories::PiecewisePolynomial;
 using drake::systems::DrakeVisualizer;
 
@@ -134,7 +134,7 @@ TEST_P(OptimizeManipulationTrajectoryTests,
        OptimizeTrajectoryThroughDesiredToolPoses) {
   // Verify that GenerateJointTrajectory() successfully generates a
   // collision-free trajectory when called with end-effector poses.
-  std::vector<Transform<double>> X_RT_desired_sequence;
+  std::vector<RigidTransform<double>> X_RT_desired_sequence;
   for (const auto q : GetParam().q_des) {
     X_RT_desired_sequence.push_back(
         kinematic_tree_->CalcRelativeTransform(q, "world", "tool_frame"));
