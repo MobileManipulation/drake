@@ -214,8 +214,9 @@ std::unique_ptr<GeometryInstance> MakeGeometryInstanceFromSdfVisual(
   }
 
   const VisualMaterial material = MakeVisualMaterialFromSdfVisual(sdf_visual);
-  return make_unique<GeometryInstance>(
-      X_LC, MakeShapeFromSdfGeometry(sdf_geometry), material);
+  return make_unique<GeometryInstance>(X_LC,
+                                       MakeShapeFromSdfGeometry(sdf_geometry),
+                                       sdf_visual.Name(), material);
 }
 
 VisualMaterial MakeVisualMaterialFromSdfVisual(const sdf::Visual& sdf_visual) {
@@ -316,9 +317,8 @@ CoulombFriction<double> MakeCoulombFrictionFromSdfCollisionOde(
   const sdf::Element* const surface_element =
       MaybeGetChildElement(*collision_element, "surface");
 
-  // If the surface is not found, the default is that of a frictionless
-  // surface (i.e. zero friction coefficients).
-  if (!surface_element) return CoulombFriction<double>();
+  // If the surface is not found, we return default friction properties.
+  if (!surface_element) return default_friction();
 
   // Once <surface> is found, <friction> and <ode> are required.
   const sdf::Element& friction_element =

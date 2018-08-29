@@ -52,9 +52,9 @@ Installing CLion
    academic license `here <https://www.jetbrains.com/shop/eform/students>`_.
 
 The most recent versions that we have tested for compatibility are:
-  - CLion 2018.1.2
-  - Bazel 0.14.1
-  - "CLion with Bazel" plug-in 2018.05.21.0.0.
+  - CLion 2018.1.6
+  - Bazel 0.16.1
+  - "CLion with Bazel" plug-in 2018.06.11.0.3.
 
 Upgrading CLion
 ---------------
@@ -254,7 +254,7 @@ find such issues. We'll define two tools:
   ``#include`` directives.
 
 These tools produce reports. In some cases, the reports can be automatically
-converted into clickable links so that you can click on a messsage and be taken
+converted into clickable links so that you can click on a message and be taken
 to the file and line indicated in the message. The configuration instructions
 include the details of how to configure these clickable links.
 
