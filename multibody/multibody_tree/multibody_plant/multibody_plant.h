@@ -74,6 +74,31 @@ namespace multibody_plant {
 /// generalized forces applied on the system. These can include externally
 /// applied body forces, constraint forces, and contact forces.
 ///
+/// @section sdf_loading Loading models from SDF files
+///
+/// Drake has the capability of loading multibody models from SDF files.
+/// Consider the example below which loads an acrobot model from a file:
+/// @code
+///   MultibodyPlant<T> acrobot;
+///   const std::string relative_name =
+///     "drake/multibody/benchmarks/acrobot/acrobot.sdf";
+///   const std::string full_name = FindResourceOrThrow(relative_name);
+///   AddModelFromSdfFile(full_name, &acrobot, &scene_graph);
+/// @endcode
+/// As in the example above, for models including visual geometry, collision
+/// geometry or both, the user must specify a SceneGraph for geometry handling.
+/// You can find a full example of the LQR controlled acrobot in
+/// examples/multibody/acrobot/run_lqr.cc.
+///
+/// AddModelFromSdfFile() can be invoked multiple times on the same plant in
+/// order to load multiple model instances.
+/// Other parsing variants are available in
+/// multibody/multibody_tree/parsing/multibody_plant_sdf_parser.h such as
+/// AddModelsFromSdfFile() (please note the change to plural, i.e, "Models"
+/// instead of "Model") which allows creating model instances per each
+/// `<model>` tag found in the file. Please refer to each of these method's
+/// documentation for further details.
+///
 /// @section adding_elements Adding modeling elements
 ///
 /// @cond
@@ -1483,17 +1508,6 @@ class MultibodyPlant : public systems::LeafSystem<T> {
   // The penalty parameters k (stiffness) and c (damping) are estimated using
   // a harmonic oscillator model within SetUpJointLimitsParameters().
   void AddJointLimitsPenaltyForces(
-      const systems::Context<T>& context, MultibodyForces<T>* forces) const;
-
-  // Helper method to apply forces due to damping at the joints.
-  // Currently, MultibodyPlant treats damping forces separately from other
-  // ForceElement forces so that it can use an implicit scheme in the time
-  // stepping scheme.
-  // TODO(amcastro-tri): Consider updating ForceElement to also compute a
-  // Jacobian for general force models. That would allow MultibodyPlant to use
-  // that general infrastructure rather than having to deal with damping in a
-  // special way.
-  void AddJointDampingForces(
       const systems::Context<T>& context, MultibodyForces<T>* forces) const;
 
   // Given a set of point pairs in `point_pairs_set`, this method computes the
