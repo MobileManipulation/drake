@@ -199,6 +199,7 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
       .value("kMobyLCP", SolverType::kMobyLCP)
       .value("kMosek", SolverType::kMosek)
       .value("kNlopt", SolverType::kNlopt)
+      .value("kOsqp", SolverType::kOsqp)
       .value("kSnopt", SolverType::kSnopt);
 
   py::class_<MathematicalProgram> prog_cls(m, "MathematicalProgram");
@@ -306,6 +307,21 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
       .def("AddLinearConstraint",
            static_cast<Binding<LinearConstraint> (MathematicalProgram::*)(
                const Formula&)>(&MathematicalProgram::AddLinearConstraint))
+      .def("AddLinearEqualityConstraint",
+           static_cast<Binding<LinearEqualityConstraint> (
+               MathematicalProgram::*)(
+               const Eigen::Ref<const Eigen::MatrixXd>&,
+               const Eigen::Ref<const Eigen::VectorXd>&,
+               const Eigen::Ref<const VectorXDecisionVariable>&)>(
+               &MathematicalProgram::AddLinearEqualityConstraint))
+      .def("AddLinearEqualityConstraint",
+           static_cast<Binding<LinearEqualityConstraint> (
+               MathematicalProgram::*)(const Expression&, double)>(
+               &MathematicalProgram::AddLinearEqualityConstraint))
+      .def("AddLinearEqualityConstraint",
+           static_cast<Binding<LinearEqualityConstraint> (
+               MathematicalProgram::*)(const Formula&)>(
+               &MathematicalProgram::AddLinearEqualityConstraint))
       .def("AddLorentzConeConstraint",
            static_cast<Binding<LorentzConeConstraint> (MathematicalProgram::*)(
                const Eigen::Ref<const VectorX<drake::symbolic::Expression>>&)>(
@@ -463,7 +479,17 @@ PYBIND11_MODULE(_mathematicalprogram_py, m) {
           })
       .def("SetSolverOption", &SetSolverOptionBySolverType<double>)
       .def("SetSolverOption", &SetSolverOptionBySolverType<int>)
-      .def("SetSolverOption", &SetSolverOptionBySolverType<string>);
+      .def("SetSolverOption", &SetSolverOptionBySolverType<string>)
+      .def("GetSolverOptions",
+          [](MathematicalProgram& prog, SolverType solver_type) {
+            py::dict out;
+            py::object update = out.attr("update");
+            const SolverId id = SolverTypeConverter::TypeToId(solver_type);
+            update(prog.GetSolverOptionsDouble(id));
+            update(prog.GetSolverOptionsInt(id));
+            update(prog.GetSolverOptionsStr(id));
+            return out;
+          });
 
   py::enum_<SolutionResult>(m, "SolutionResult")
       .value("kSolutionFound", SolutionResult::kSolutionFound)
