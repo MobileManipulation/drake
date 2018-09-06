@@ -70,8 +70,8 @@ class PointConstraint : public Constraint {
   }
 
   void DoEval(
-      const Eigen::Ref<const drake::VectorX<drake::symbolic::Variable>>& x,
-      drake::VectorX<drake::symbolic::Expression>* y) const override {
+      const Eigen::Ref<const drake::VectorX<drake::symbolic::Variable>>&,
+      drake::VectorX<drake::symbolic::Expression>*) const override {
     throw std::runtime_error("PointConstraint on Expression not implemented");
   }
 

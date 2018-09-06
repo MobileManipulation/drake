@@ -126,8 +126,8 @@ class RelativePoseConstraint : public Constraint {
     DoEvalGeneric(x, y);
   }
 
-  void DoEval(const Eigen::Ref<const VectorX<drake::symbolic::Variable>>& x,
-              VectorX<drake::symbolic::Expression>* y) const override {
+  void DoEval(const Eigen::Ref<const VectorX<drake::symbolic::Variable>>&,
+              VectorX<drake::symbolic::Expression>*) const override {
     throw std::runtime_error(
         "RelativePoseConstraint on Expression not implemented");
   }
