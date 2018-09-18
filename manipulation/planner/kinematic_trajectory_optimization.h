@@ -332,7 +332,7 @@ class KinematicTrajectoryOptimization {
 
   drake::copyable_unique_ptr<drake::solvers::MathematicalProgram> prog_{};
 
-  bool is_program_empty_{true};
+  ////// bool is_program_empty_{true};
 };
 }  // namespace planner
 }  // namespace manipulation
